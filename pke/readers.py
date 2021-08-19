@@ -49,6 +49,31 @@ class MinimalCoreNLPReader(Reader):
         return doc
 
 
+class JsonCoreNLPReader(Reader):
+    """Json CoreNLP Parser."""
+
+    def read(self, path, **kwargs):
+        
+        with open(path, 'r') as f:
+            scn = json.load(f)
+
+        sentences = []
+        for sentence in scn["sentences"]:
+            sentences.append({
+                "words": [t["word"] for t in sentence["tokens"]],
+                "lemmas": [t["lemma"] for t in sentence["tokens"]],
+                "POS": [t["pos"] for t in sentence["tokens"]],
+                "char_offsets": [
+                    (t["characterOffsetBegin"], t["characterOffsetEnd"]) 
+                    for t in sentence["tokens"]],
+                "id": sentence['index']
+            })
+        
+        doc = Document.from_sentences(sentences, input_file=path, **kwargs)
+
+        return doc
+
+
 # FIX
 def fix_spacy_for_french(nlp):
     """Fixes https://github.com/boudinfl/pke/issues/115.

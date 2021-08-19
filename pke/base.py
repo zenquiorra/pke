@@ -5,7 +5,7 @@
 from collections import defaultdict
 
 from pke.data_structures import Candidate, Document
-from pke.readers import MinimalCoreNLPReader, RawTextReader
+from pke.readers import MinimalCoreNLPReader, RawTextReader, JsonCoreNLPReader
 
 from nltk import RegexpParser
 from nltk.corpus import stopwords
@@ -104,6 +104,10 @@ def is_corenlp(input):
     return is_file_path(input) and input.endswith('.xml')
 
 
+def is_json_corenlp(input):
+    return is_file_path(input) and input.endswith('.json')
+
+
 class LoadFile(object):
     """The LoadFile class that provides base functions."""
 
@@ -158,6 +162,11 @@ class LoadFile(object):
         if is_corenlp(input):
             path = input
             parser = MinimalCoreNLPReader()
+            doc = parser.read(path=input, **kwargs)
+            doc.is_corenlp_file = True
+        elif is_json_corenlp(input):
+            path = input
+            parser = JsonCoreNLPReader()
             doc = parser.read(path=input, **kwargs)
             doc.is_corenlp_file = True
         elif is_file_path(input):
