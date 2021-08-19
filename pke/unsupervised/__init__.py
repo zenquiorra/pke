@@ -11,6 +11,7 @@ from pke.unsupervised.graph_based.single_tpr import TopicalPageRank
 from pke.unsupervised.graph_based.expandrank import ExpandRank
 from pke.unsupervised.graph_based.textrank import TextRank
 from pke.unsupervised.graph_based.collabrank import CollabRank
+from pke.unsupervised.graph_based.unifiedrank import UnifiedRank
 
 
 from pke.unsupervised.statistical.tfidf import TfIdf

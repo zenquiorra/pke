@@ -185,7 +185,7 @@ class TopicCoRank(TopicRank):
                             input_file=None,
                             excluded_file=None,
                             prune_unreachable_nodes=True,
-                            lambda_t=0.1,
+                            lambda_t=0.5,
                             lambda_k=0.5,
                             nb_iter=100,
                             convergence_threshold=0.001):
@@ -196,7 +196,7 @@ class TopicCoRank(TopicRank):
             excluded_file (str): file to exclude (for leave-one-out
                 cross-validation), defaults to None.
             lambda_t(float): lambda for topics used in the co-ranking formulae,
-                defaults to 0.1.
+                defaults to 0.5.
             lambda_k(float): lambda for keyphrases used in the co-ranking
                 formulae, defaults to 0.5.
             nb_iter (int): maximum number of iterations, defaults to 100.
@@ -300,22 +300,31 @@ class TopicCoRank(TopicRank):
 
                 gold = self.graph.nodes[i]["candidate"]
 
-                # check if it is acceptable, i.e. if it is directly or
-                # transitively connected to a topic
-                connected = False
-                for j in self.graph.neighbors(i):
-                    if self.graph.nodes[j]["src"] == "topic":
-                        connected = True
-                        break
-                    for k in self.graph.neighbors(j):
-                        if self.graph.nodes[k]["src"] == "topic":
-                            connected = True
-                            break
-                    if connected:
-                        break
+                # if the gold keyphrase occurs in the document and is
+                # already weighted
+                if gold in self.weights:
+                    self.weights[gold] = max(self.weights[gold], weights[i])
+                else:
+                    self.weights[gold] = weights[i]
 
-                if connected:
-                    if gold in self.weights:
-                        self.weights[gold] = max(self.weights[gold], weights[i])
-                    else:
-                        self.weights[gold] = weights[i]
+                # # check if it is acceptable, i.e. if it is directly or
+                # # transitively connected to a topic
+                # connected = False
+                # for j in self.graph.neighbors(i):
+                #     if self.graph.nodes[j]["src"] == "topic":
+                #         connected = True
+                #         break
+                #     for k in self.graph.neighbors(j):
+                #         if self.graph.nodes[k]["src"] == "topic":
+                #             connected = True
+                #             break
+                #     if connected:
+                #         break
+
+                # if connected:
+                #     if gold in self.weights:
+                #         self.weights[gold] = max(self.weights[gold], weights[i])
+                #         print(i, "domain", gold, self.weights[gold], weights[i])
+                #     else:
+                #         self.weights[gold] = weights[i]
+                #         print(i, "domain", gold, weights[i])
