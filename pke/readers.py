@@ -5,7 +5,6 @@
 
 import os
 import sys
-import json
 import logging
 import xml.etree.ElementTree as etree
 import spacy
@@ -52,13 +51,13 @@ class MinimalCoreNLPReader(Reader):
 class JsonCoreNLPReader(Reader):
     """Json CoreNLP Parser."""
 
-    def read(self, path, **kwargs):
+    def read(self, json_doc, **kwargs):
         
-        with open(path, 'r') as f:
-            scn = json.load(f)
+        # with open(path, 'r') as f:
+        #     scn = json.load(f)
 
         sentences = []
-        for sentence in scn["sentences"]:
+        for sentence in json_doc["sentences"]:
             sentences.append({
                 "words": [t["word"] for t in sentence["tokens"]],
                 "lemmas": [t["lemma"] for t in sentence["tokens"]],
@@ -69,7 +68,7 @@ class JsonCoreNLPReader(Reader):
                 "id": sentence['index']
             })
         
-        doc = Document.from_sentences(sentences, input_file=path, **kwargs)
+        doc = Document.from_sentences(sentences, **kwargs)
 
         return doc
 

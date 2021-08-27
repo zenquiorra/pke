@@ -28,35 +28,52 @@ class UnifiedRank(MultipartiteRank):
 
         super(UnifiedRank, self).__init__()
 
-
-    def unify_with_phrasebank(self, phrasebank):
-        """Unify the phrasebank graph with the topic graph."""
+    def unify_with_phrasebank(self, phrasebank, prune_unreachable):
+        """Unify the phrasebank graphs with the topic graph."""
 
         # self.graph = nx.compose(self.graph, phrasebank)
 
-        for node_i in phrasebank.nodes():
-            # add node if missing
-            if node_i not in self.graph:
-                self.graph.add_node(node_i, src="phrasebank")
+        # for each graph from the phrasebank
+        for G in phrasebank:
+            doc_id = G.graph["src"]
+            doc_weight = G.graph["weight"]
+            logging.debug("unifying with {}".format(doc_id))
 
-        for node_i, node_j in phrasebank.edges():
-            if not self.graph.has_edge(node_i, node_j):
+            # compose with the document graph
+            self.graph = nx.compose(self.graph, G)
 
-                if "src" in self.graph[node_i] and "src" in self.graph[node_j]:
-                    self.graph.add_edge(node_i, node_j,
-                        weight=phrasebank[node_i][node_j]['weight'])
-                else:
-                    self.graph.add_edge(node_i, node_j, weight=0.0)
-            else:
-                self.graph[node_i][node_j]['weight'] += phrasebank[node_i][node_j]['weight']
+            # add the connections
+            for node in G.nodes():
+                _, node_str = node.split("___")
+                if node_str in self.graph:
+                    self.graph.add_edges_from([(node, node_str),
+                                               (node_str, node)],
+                                                weight=1.0)
 
+        # prune not reachable domain nodes
+        if prune_unreachable:
 
+            # find all descendants
+            descendants = set(self.candidates)
+            for candidate in self.candidates:
+                descendants.update(nx.algorithms.descendants(self.graph,
+                                                             candidate))
+
+            # remove unreachable nodes
+            nb_nodes = len(self.graph.nodes)
+            self.graph.remove_nodes_from(set(self.graph.nodes) - descendants)
+            logging.debug("pruning graph from |{}| to |{}|".format(nb_nodes,
+                                                         len(self.graph.nodes)))
+
+            if len(self.graph.nodes) < len(self.candidates):
+                logging.warning("Big Issue with node pruning :(")
 
     def candidate_weighting(self,
                             threshold=0.74,
                             method='average',
                             alpha=1.1,
-                            phrasebank=None):
+                            phrasebank=None,
+                            prune_unreachable=False):
         """ Candidate weight calculation using random walk.
 
             Args:
@@ -66,6 +83,9 @@ class UnifiedRank(MultipartiteRank):
                 alpha (float): hyper-parameter that controls the strength of the
                     weight adjustment, defaults to 1.1.
                 phrasebank (nx.Graph): phrasebank graph in network format.
+                prune_unreachable (boolean): prune phrasebank nodes that are
+                    unreachable from the document nodes, defaults to False.
+
         """
         if not self.candidates:
             return
@@ -80,7 +100,7 @@ class UnifiedRank(MultipartiteRank):
 
         # unify with phrasebank graph
         if phrasebank is not None:
-            self.unify_with_phrasebank(phrasebank)
+            self.unify_with_phrasebank(phrasebank, prune_unreachable)
 
         # print(len(self.graph.nodes))
 
@@ -90,4 +110,17 @@ class UnifiedRank(MultipartiteRank):
 
         # compute the word scores using random walk
         self.weights = nx.pagerank_scipy(self.graph)
+
+        # remove duplicates from connected graphs
+        candidates = list(self.weights.keys())
+        for candidate in candidates:
+            if "___" in candidate:
+                _, _candidate = candidate.split("___")
+                if _candidate in self.weights:
+                    self.weights[_candidate] = max(self.weights[_candidate],
+                                                   self.weights[candidate])
+                else:
+                    self.weights[_candidate] = self.weights[candidate]
+                del self.weights[candidate]
+
 

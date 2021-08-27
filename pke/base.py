@@ -18,6 +18,7 @@ from string import punctuation
 import os
 import logging
 import codecs
+import json
 
 from six import string_types
 
@@ -167,7 +168,13 @@ class LoadFile(object):
         elif is_json_corenlp(input):
             path = input
             parser = JsonCoreNLPReader()
-            doc = parser.read(path=input, **kwargs)
+            with open(path, encoding=kwargs.get('encoding', 'utf-8')) as f:
+                input = json.load(f)
+            doc = parser.read(json_doc=input, **kwargs)
+            doc.is_corenlp_file = True
+        elif isinstance(input, dict):
+            parser = JsonCoreNLPReader()
+            doc = parser.read(json_doc=input, **kwargs)
             doc.is_corenlp_file = True
         elif is_file_path(input):
             path = input
