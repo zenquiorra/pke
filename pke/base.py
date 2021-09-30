@@ -5,7 +5,7 @@
 from collections import defaultdict
 
 from pke.data_structures import Candidate, Document
-from pke.readers import MinimalCoreNLPReader, RawTextReader, JsonCoreNLPReader
+from pke.readers import RawTextReader, SpacyDocReader
 
 from nltk import RegexpParser
 from nltk.corpus import stopwords
@@ -17,10 +17,7 @@ from .langcodes import LANGUAGE_CODE_BY_NAME
 from string import punctuation
 import os
 import logging
-import codecs
-import json
-
-from six import string_types
+import spacy
 
 from builtins import str
 
@@ -63,7 +60,7 @@ def get_stopwords(lang):
 
 
 def get_stemmer_func(lang):
-    """Provide steming function for the given language, or identity function.
+    """Provide stemming function for the given language, or identity function.
 
     If stemming is not available for a given language, a default value is
     returned and a warning is displayed
@@ -86,10 +83,6 @@ def get_stemmer_func(lang):
         return lambda x: x
 
 
-escaped_punctuation = {'-lrb-': '(', '-rrb-': ')', '-lsb-': '[', '-rsb-': ']',
-                       '-lcb-': '{', '-rcb-': '}'}
-
-
 def is_file_path(input):
     try:
         return os.path.isfile(input)
@@ -99,14 +92,6 @@ def is_file_path(input):
         # We return false as even is the string is a file_path we won't be able
         #  to open it
         return False
-
-
-def is_corenlp(input):
-    return is_file_path(input) and input.endswith('.xml')
-
-
-def is_json_corenlp(input):
-    return is_file_path(input) and input.endswith('.json')
 
 
 class LoadFile(object):
@@ -142,49 +127,45 @@ class LoadFile(object):
         self.stoplist = None
         """List of stopwords."""
 
-    def load_document(self, input, **kwargs):
+    def load_document(self,
+                      input,
+                      language='en',
+                      encoding='utf-8',
+                      normalization='stemming',
+                      **kwargs):
         """Loads the content of a document/string/stream in a given language.
 
         Args:
             input (str): input.
             language (str): language of the input, defaults to 'en'.
-            encoding (str): encoding of the raw file.
+            encoding (str): encoding of the raw file, defaults to 'utf-8'.
             normalization (str): word normalization method, defaults to
                 'stemming'. Other possible values are 'lemmatization' or 'None'
                 for using word surface forms instead of stems/lemmas.
         """
 
-        # get the language parameter
-        language = kwargs.get('language', 'en')
-
         # initialize document
         doc = Document()
 
-        if is_corenlp(input):
-            path = input
-            parser = MinimalCoreNLPReader()
-            doc = parser.read(path=input, **kwargs)
-            doc.is_corenlp_file = True
-        elif is_json_corenlp(input):
-            path = input
-            parser = JsonCoreNLPReader()
-            with open(path, encoding=kwargs.get('encoding', 'utf-8')) as f:
-                input = json.load(f)
-            doc = parser.read(json_doc=input, **kwargs)
-            doc.is_corenlp_file = True
-        elif isinstance(input, dict):
-            parser = JsonCoreNLPReader()
-            doc = parser.read(json_doc=input, **kwargs)
-            doc.is_corenlp_file = True
+        # check whether input is a spacy doc instance
+        # i.e. an already processed text input
+        if isinstance(input, spacy.tokens.doc.Doc):
+            parser = SpacyDocReader()
+            doc = parser.read(spacy_doc=input, **kwargs)
+
+        # or whether input is a text file
         elif is_file_path(input):
             path = input
-            with open(path, encoding=kwargs.get('encoding', 'utf-8')) as f:
-                input = f.read()
+            with open(path, encoding=encoding) as f:
+                text = f.read()
             parser = RawTextReader(language=language)
-            doc = parser.read(text=input, path=path, **kwargs)
+            doc = parser.read(text=text, path=path, **kwargs)
+
+        # of whether input is a text string
         elif isinstance(input, str):
             parser = RawTextReader(language=language)
             doc = parser.read(text=input, **kwargs)
+
         else:
             logging.error('Cannot process input. It is neither a file path '
                           'or a string: {}'.format(type(input)))
@@ -202,23 +183,23 @@ class LoadFile(object):
         # initialize the stoplist
         self.stoplist = get_stopwords(self.language)
 
-        # word normalization
-        self.normalization = kwargs.get('normalization', 'stemming')
+        # set the word normalization
+        self.normalization = normalization
 
+        # replace lemmas with stems if needed
         if self.normalization == 'stemming':
             stem = get_stemmer_func(self.language)
-            get_stem = lambda s: [stem(w).lower() for w in s.words]
-        else:
-            get_stem = lambda s: [w.lower() for w in s.words]
+            for i, sentence in enumerate(self.sentences):
+                self.sentences[i].stems = [stem(w).lower() for w in sentence.words]
 
-        # Populate Sentence.stems according to normalization
-        for i, sentence in enumerate(self.sentences):
-            self.sentences[i].stems = get_stem(sentence)
+        # or replace lemmas with lower-cased words if needed
+        elif self.normalization is None:
+            for i, sentence in enumerate(self.sentences):
+                self.sentences[i].stems = [w.lower() for w in sentence.words]
 
         # POS normalization
         if getattr(doc, 'is_corenlp_file', False):
             self.normalize_pos_tags()
-            self.unescape_punctuation_marks()
 
     def normalize_pos_tags(self):
         """Normalizes the PoS tags from udp-penn to UD."""
@@ -228,15 +209,6 @@ class LoadFile(object):
             for i, sentence in enumerate(self.sentences):
                 self.sentences[i].pos = [map_tag('en-ptb', 'universal', tag)
                                          for tag in sentence.pos]
-
-    def unescape_punctuation_marks(self):
-        """Replaces the special punctuation marks produced by CoreNLP."""
-
-        for i, sentence in enumerate(self.sentences):
-            for j, word in enumerate(sentence.words):
-                l_word = word.lower()
-                self.sentences[i].words[j] = escaped_punctuation.get(l_word,
-                                                                     word)
 
     def is_redundant(self, candidate, prev, minimum_length=1):
         """Test if one candidate is redundant with respect to a list of already

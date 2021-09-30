@@ -6,7 +6,7 @@
 import os
 import sys
 import logging
-import xml.etree.ElementTree as etree
+import json
 import spacy
 
 from pke.data_structures import Document
@@ -17,60 +17,19 @@ class Reader(object):
         raise NotImplementedError
 
 
-class MinimalCoreNLPReader(Reader):
-    """Minimal CoreNLP XML Parser."""
+class SpacyDocReader(Reader):
+    """Minimal Spacy Doc Reader."""
 
-    def __init__(self):
-        self.parser = etree.XMLParser()
-
-    def read(self, path, **kwargs):
+    def read(self, spacy_doc, **kwargs):
         sentences = []
-        tree = etree.parse(path, self.parser)
-        for sentence in tree.iterfind('./document/sentences/sentence'):
-            # get the character offsets
-            starts = [int(u.text) for u in
-                      sentence.iterfind("tokens/token/CharacterOffsetBegin")]
-            ends = [int(u.text) for u in
-                    sentence.iterfind("tokens/token/CharacterOffsetEnd")]
+        for sentence_id, sentence in enumerate(spacy_doc.sents):
             sentences.append({
-                "words": [u.text for u in
-                          sentence.iterfind("tokens/token/word")],
-                "lemmas": [u.text for u in
-                           sentence.iterfind("tokens/token/lemma")],
-                "POS": [u.text for u in sentence.iterfind("tokens/token/POS")],
-                "char_offsets": [(starts[k], ends[k]) for k in
-                                 range(len(starts))]
+                "words": [token.text for token in sentence],
+                "lemmas": [token.lemma_ for token in sentence],
+                "POS": [token.pos_ or token.tag_ for token in sentence],
+                "char_offsets": [(token.idx, token.idx + len(token.text)) for token in sentence]
             })
-            sentences[-1].update(sentence.attrib)
-
-        doc = Document.from_sentences(sentences, input_file=path, **kwargs)
-
-        return doc
-
-
-class JsonCoreNLPReader(Reader):
-    """Json CoreNLP Parser."""
-
-    def read(self, json_doc, **kwargs):
-        
-        # with open(path, 'r') as f:
-        #     scn = json.load(f)
-
-        sentences = []
-        for sentence in json_doc["sentences"]:
-            sentences.append({
-                "words": [t["word"] for t in sentence["tokens"]],
-                "lemmas": [t["lemma"] for t in sentence["tokens"]],
-                "POS": [t["pos"] for t in sentence["tokens"]],
-                "char_offsets": [
-                    (t["characterOffsetBegin"], t["characterOffsetEnd"]) 
-                    for t in sentence["tokens"]],
-                "id": sentence['index']
-            })
-        
-        doc = Document.from_sentences(sentences, **kwargs)
-
-        return doc
+        return Document.from_sentences(sentences, **kwargs)
 
 
 # FIX

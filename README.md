@@ -25,12 +25,12 @@ To pip install `pke` from github:
 pip install git+https://github.com/boudinfl/pke.git
 ```
 
-`pke` also requires external resources that can be obtained using:
+`pke` requires `spacy` that can be obtained using:
 
 ```bash
-python -m nltk.downloader stopwords
-python -m nltk.downloader universal_tagset
-python -m spacy download en # download the english model
+# install spacy
+pip install -U spacy
+python -m spacy download en_core_web_sm
 ```
 
 As of April 2019, `pke` only supports Python 3.6+.
@@ -49,7 +49,7 @@ extractor = pke.unsupervised.TopicRank()
 
 # load the content of the document, here document is expected to be in raw
 # format (i.e. a simple text file) and preprocessing is carried out using spacy
-extractor.load_document(input='/path/to/input.txt', language='en')
+extractor.load_document(input='path/to/input.txt', language='en')
 
 # keyphrase candidate selection, in the case of TopicRank: sequences of nouns
 # and adjectives (i.e. `(Noun|Adj)*`)

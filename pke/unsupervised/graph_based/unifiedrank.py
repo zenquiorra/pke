@@ -39,6 +39,17 @@ class UnifiedRank(MultipartiteRank):
             doc_weight = G.graph["weight"]
             logging.debug("unifying with {}".format(doc_id))
 
+            # # prune the graph if unreachable
+            # reachable = False
+            # for node in G.nodes():
+            #     _, node_str = node.split("___")
+            #     if node_str in self.graph:
+            #         reachable = True
+            #         break
+            # if not reachable:
+            #     logging.debug("pruning an unreachable graph here")
+            #     continue
+
             # compose with the document graph
             self.graph = nx.compose(self.graph, G)
 
@@ -48,7 +59,7 @@ class UnifiedRank(MultipartiteRank):
                 if node_str in self.graph:
                     self.graph.add_edges_from([(node, node_str),
                                                (node_str, node)],
-                                                weight=1.0)
+                                                weight=doc_weight)
 
         # prune not reachable domain nodes
         if prune_unreachable:
