@@ -19,21 +19,20 @@ ships with supervised models trained on the
 
 ## Installation
 
+`spacy` is required for document preprocessing and could be installed using the following lines.
+More details about installation and models for other languages can be found on [`spacy website`](https://spacy.io/usage).
+
+```bash
+pip install -U spacy
+python -m spacy download en_core_web_sm # here to download the english model
+```
+
+
 To pip install `pke` from github:
 
 ```bash
 pip install git+https://github.com/boudinfl/pke.git
 ```
-
-`pke` requires `spacy` that can be obtained using:
-
-```bash
-# install spacy
-pip install -U spacy
-python -m spacy download en_core_web_sm
-```
-
-As of April 2019, `pke` only supports Python 3.6+.
 
 ## Minimal example
 
@@ -43,13 +42,18 @@ Start by typing the 5 lines below. For using another model, simply replace
 
 ```python
 import pke
+import spacy
+
+# preprocess an input file with spacy
+nlp = spacy.load("en_core_web_sm")
+with open('path/to/input.txt') as f:
+    doc = nlp(f.read())
 
 # initialize keyphrase extraction model, here TopicRank
 extractor = pke.unsupervised.TopicRank()
 
-# load the content of the document, here document is expected to be in raw
-# format (i.e. a simple text file) and preprocessing is carried out using spacy
-extractor.load_document(input='path/to/input.txt', language='en')
+# load the content of the document from a spacy processed doc object
+extractor.load_document(input=doc, language='en')
 
 # keyphrase candidate selection, in the case of TopicRank: sequences of nouns
 # and adjectives (i.e. `(Noun|Adj)*`)

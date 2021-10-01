@@ -5,7 +5,7 @@
 from collections import defaultdict
 
 from pke.data_structures import Candidate, Document
-from pke.readers import RawTextReader, SpacyDocReader
+from pke.readers import SpacyDocReader
 
 from nltk import RegexpParser
 from nltk.corpus import stopwords
@@ -152,19 +152,6 @@ class LoadFile(object):
         if isinstance(input, spacy.tokens.doc.Doc):
             parser = SpacyDocReader()
             doc = parser.read(spacy_doc=input, **kwargs)
-
-        # or whether input is a text file
-        elif is_file_path(input):
-            path = input
-            with open(path, encoding=encoding) as f:
-                text = f.read()
-            parser = RawTextReader(language=language)
-            doc = parser.read(text=text, path=path, **kwargs)
-
-        # of whether input is a text string
-        elif isinstance(input, str):
-            parser = RawTextReader(language=language)
-            doc = parser.read(text=input, **kwargs)
 
         else:
             logging.error('Cannot process input. It is neither a file path '
