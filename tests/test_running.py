@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from spacy.tokens import Doc
+from spacy.vocab import Vocab
+
 import os
 from pke.unsupervised import (
     TopicRank, SingleRank,
@@ -11,12 +14,13 @@ from pke.unsupervised import (
 )
 from pke.supervised import Kea, WINGNUS
 
-test_file = os.path.join('tests', 'data', '1939.xml')
+test_file = os.path.join('tests', 'data', '1939.doc')
+doc = Doc(Vocab()).from_disk(test_file)
 
 def test_unsupervised_run():
-    def test(model, file):
+    def test(model):
         extractor = model()
-        extractor.load_document(file)
+        extractor.load_document(input=doc)
         extractor.candidate_selection()
         extractor.candidate_weighting()
 
@@ -29,13 +33,13 @@ def test_unsupervised_run():
     ]
     for m in models:
         print("testing {}".format(m))
-        test(m, test_file)
+        test(m)
 
 
 def test_supervised_run():
-    def test(model, file):
+    def test(model):
         extractor = model()
-        extractor.load_document(file)
+        extractor.load_document(input=doc)
         extractor.candidate_selection()
         extractor.candidate_weighting()
 
@@ -44,7 +48,7 @@ def test_supervised_run():
     ]
     for m in models:
         print("testing {}".format(m))
-        test(m, test_file)
+        test(m)
 
 
 if __name__ == '__main__':

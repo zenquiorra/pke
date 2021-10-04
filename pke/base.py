@@ -10,7 +10,7 @@ from pke.readers import SpacyDocReader
 from nltk import RegexpParser
 from nltk.corpus import stopwords
 from nltk.tag.mapping import map_tag
-from nltk.stem.snowball import SnowballStemmer, PorterStemmer
+from nltk.stem.snowball import SnowballStemmer
 
 from .langcodes import LANGUAGE_CODE_BY_NAME
 
@@ -100,9 +100,6 @@ class LoadFile(object):
     def __init__(self):
         """Initializer for LoadFile class."""
 
-        self.input_file = None
-        """Path to the input file."""
-
         self.language = None
         """Language of the input file."""
 
@@ -147,19 +144,14 @@ class LoadFile(object):
         # initialize document
         doc = Document()
 
-        # check whether input is a spacy doc instance
-        # i.e. an already processed text input
+        # check whether input is a spacy doc object instance
         if isinstance(input, spacy.tokens.doc.Doc):
             parser = SpacyDocReader()
             doc = parser.read(spacy_doc=input, **kwargs)
-
         else:
             logging.error('Cannot process input. It is neither a file path '
                           'or a string: {}'.format(type(input)))
             return
-
-        # set the input file
-        self.input_file = doc.input_file
 
         # set the language of the document
         self.language = language

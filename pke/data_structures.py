@@ -62,19 +62,15 @@ class Document:
         """ The sentence container (list of Sentence). """
 
     @staticmethod
-    def from_sentences(sentences, **kwargs):
+    def from_sentences(sentences):
         """Populate the sentence list.
 
         Args:
             sentences (Sentence list): content to create the document.
-            input_file (str): path to the input file.
         """
 
         # initialize document
         doc = Document()
-
-        # set the input file
-        doc.input_file = kwargs.get('input_file', None)
 
         # loop through the parsed sentences
         for i, sentence in enumerate(sentences):

@@ -151,7 +151,7 @@ class ExpandRank(SingleRank):
                                    window=window,
                                    pos=pos)
         # compute the word scores using random walk
-        w = nx.pagerank_scipy(self.graph, alpha=0.85, weight='weight')
+        w = nx.pagerank(self.graph, alpha=0.85, weight='weight')
 
         # loop through the candidates
         for k in self.candidates.keys():

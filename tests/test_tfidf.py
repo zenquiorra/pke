@@ -2,23 +2,26 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from spacy.tokens import Doc
+from spacy.vocab import Vocab
 
 import os
 import pke
 
-test_file = os.path.join('tests', 'data', '1939.xml')
+test_file = os.path.join('tests', 'data', '1939.doc')
+doc = Doc(Vocab()).from_disk(test_file)
 
 
 def test_tfidf_candidate_selection():
     extractor = pke.unsupervised.TfIdf()
-    extractor.load_document(test_file)
+    extractor.load_document(input=doc)
     extractor.candidate_selection()
-    assert len(extractor.candidates) == 160
+    assert len(extractor.candidates) == 161
 
 
 def test_tfidf_candidate_weighting():
     extractor = pke.unsupervised.TfIdf()
-    extractor.load_document(test_file)
+    extractor.load_document(input=doc)
     extractor.candidate_selection()
     extractor.candidate_weighting()
     keyphrases = [k for k, s in extractor.get_n_best(n=3)]
