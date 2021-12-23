@@ -12,6 +12,8 @@ import spacy
 
 from pke.data_structures import Document
 
+from tokseg import Split
+
 
 class Reader(object):
     def read(self, path):
@@ -110,6 +112,7 @@ def str2spacy(model):
     if int(spacy.__version__.split('.')[0]) < 3:
         downloaded_models = [os.path.basename(m) for m in list_downloaded_spacy_models()]
         links = list_linked_spacy_models()
+        
     else:
         # As of spacy v3, links do not exist anymore and it is simpler to get a list of
         # downloaded models
@@ -163,12 +166,17 @@ class RawTextReader(Reader):
         """
 
         spacy_model = kwargs.get('spacy_model', None)
-
+        
+        # err flag to make tokenization possible for languages with no model support in spacy
+        err_flag = False
+        
         if spacy_model is None:
             try:
                 spacy_model = spacy.load(str2spacy(self.language),
                                          disable=['ner', 'textcat', 'parser'])
             except OSError:
+                err_flag = True
+                
                 logging.warning('No spacy model for \'{}\' language.'.format(self.language))
                 logging.warning('Falling back to using english model. There might '
                     'be tokenization and postagging errors. A list of available '
@@ -176,6 +184,7 @@ class RawTextReader(Reader):
                         self.language))
                 spacy_model = spacy.load(str2spacy('en'),
                                          disable=['ner', 'textcat', 'parser'])
+         
             if int(spacy.__version__.split('.')[0]) < 3:
                 sentencizer = spacy_model.create_pipe('sentencizer')
             else:
@@ -183,20 +192,36 @@ class RawTextReader(Reader):
             spacy_model.add_pipe(sentencizer)
             if 'max_length' in kwargs and kwargs['max_length']:
                 spacy_model.max_length = kwargs['max_length']
+        
+        if err_flag:
+            sp = Split()
+#             tokens = sp.tokenize(text, self.language)
+#             tokens = [str(token) for token in tokens] # for japanese tokenization
+            
+            sentences = []
+            sts = sp.segment(text, self.language)
+            for sentence in sts:
+                tokens = sp.tokenize(sentence, self.language)
+                sentences.append({"words":[str(token) for token in tokens], 
+                                  "lemmas":["NA" for token in tokens],
+                                  "POS":["NA" for token in tokens],
+                                  "char_offsets":[(1,1) for token in tokens],
+                                 
+            
+        else:
+            spacy_model = fix_spacy_for_french(spacy_model)
+            spacy_doc = spacy_model(text)
 
-        spacy_model = fix_spacy_for_french(spacy_model)
-        spacy_doc = spacy_model(text)
-
-        sentences = []
-        for sentence_id, sentence in enumerate(spacy_doc.sents):
-            sentences.append({
-                "words": [token.text for token in sentence],
-                "lemmas": [token.lemma_ for token in sentence],
-                # FIX : This is a fallback if `fix_spacy_for_french` does not work
-                "POS": [token.pos_ or token.tag_ for token in sentence],
-                "char_offsets": [(token.idx, token.idx + len(token.text))
-                                 for token in sentence]
-            })
+            sentences = []
+            for sentence_id, sentence in enumerate(spacy_doc.sents):
+                sentences.append({
+                    "words": [token.text for token in sentence],
+                    "lemmas": [token.lemma_ for token in sentence],
+                    # FIX : This is a fallback if `fix_spacy_for_french` does not work
+                    "POS": [token.pos_ or token.tag_ for token in sentence],
+                    "char_offsets": [(token.idx, token.idx + len(token.text))
+                                     for token in sentence]
+                })
 
         doc = Document.from_sentences(
             sentences, input_file=kwargs.get('input_file', None), **kwargs)
