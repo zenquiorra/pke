@@ -44,20 +44,23 @@ def load_document_frequency_file(input_file,
     """
 
     # initialize the DF dictionary
-    frequencies = {}
+    
 
-    # open the input file
-    with gzip.open(input_file, 'rt', encoding='utf-8') if input_file.endswith('.gz') else \
-            codecs.open(input_file, 'rt', encoding='utf-8') as f:
-        # read the csv file
-        df_reader = csv.reader(f, delimiter=delimiter)
+    freq  = dict()
+    # modified dictionary handling for frequency and simpler file handling
+    with open(input_file, 'r', encoding = 'utf-8') as f:
+        x = f.readlines()
 
-        # populate the dictionary
-        for row in df_reader:
-            frequencies[row[0]] = int(row[1])
+        for i in x:
+            i = i.strip()
+            key_val = i.split("  ")
+            try:
+                freq[key_val[0]] = int(key_val[1])
+            except:
+                continue
 
-    # return the populated dictionary
-    return frequencies
+
+    return freq
 
 
 def compute_document_frequency(input_dir,
