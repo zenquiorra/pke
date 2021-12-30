@@ -71,7 +71,7 @@ class Split:
             return sentences
         
         elif lang == 'es' or lang == 'en' or lang == 'ru':
-            return [' '.join([token.value for token in sentence][:-1]) for sentence in paragraph for paragraph in segmenter.process(text)]
+            return [' '.join([token.value for token in sentence][:-1]) for paragraph in segmenter.process(text) for sentence in paragraph]
         
         
         else:
