@@ -204,7 +204,7 @@ class RawTextReader(Reader):
                 tokens = sp.tokenize(sentence, self.language)
                 sentences.append({"words":[str(token) for token in tokens], 
                                   "lemmas":["NA" for token in tokens],
-                                  "POS":["NA" for token in tokens],
+                                  "POS":["NOUN" for token in tokens],
                                   "char_offsets":[(1,1) for token in tokens],
                                  
             
