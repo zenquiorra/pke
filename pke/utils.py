@@ -216,7 +216,19 @@ def train_supervised_model(input_dir,
         model.__init__()
 
         # load the document
-        model.load_document(input=input_file,
+        def file_loader(name):
+          # Loads a json file
+          with open(name, encoding = 'utf-8') as f:
+              data = json.load(f)
+          return data
+        
+        from fileparser import Parse
+        
+        
+        file = input_dir + input_file
+        input_file_s = Parse(file_loader(file)).get_textall()
+        
+        model.load_document(input=input_file_s,
                             language=language,
                             normalization=normalization,
                             encoding=encoding)
@@ -287,6 +299,9 @@ def load_references(input_file,
         excluded_file (str): file to exclude (for leave-one-out
             cross-validation), defaults to None.
     """
+    
+    
+    
 
     logging.info('loading reference keyphrases from {}'.format(input_file))
 
@@ -510,7 +525,7 @@ def load_pairwise_similarities(path):
 def compute_pairwise_similarity_matrix(input_dir,
                                        output_file,
                                        collection_dir=None,
-                                       df=None,
+                                       f=None,
                                        extension="xml",
                                        language="en",
                                        normalization="stemming",
